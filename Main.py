@@ -1,49 +1,38 @@
+import os
 import discord
 import openai
-import nest_asyncio
-import asyncio
+from discord.ext import commands
 
-# --- IMPORTANT: Replace with your own tokens ---
-DISCORD_TOKEN = "YOUR_DIACORD_TOKEN_HERE"
-OPENAI_API_KEY = "YOUR_OPENAI_KEY_HERE"
+# Load environment variables
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Setup
+# Setup clients
 openai.api_key = OPENAI_API_KEY
 intents = discord.Intents.default()
 intents.message_content = True
-client = discord.Client(intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-@client.event
+@bot.event
 async def on_ready():
-    print(f"✅ Logged in as {client.user}")
+    print(f"🤖 Ox AI is online as {bot.user}")
 
-@client.event
+@bot.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
-    # Only respond if message starts with "!"
-    if message.content.startswith("!"):
-        prompt = message.content[1:]
-        await message.channel.send("🤖 Thinking...")
-
+    if message.content.startswith("!ask"):
+        prompt = message.content[len("!ask "):]
         try:
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are OX AI, a helpful Discord assistant."},
-                    {"role": "user", "content": prompt}
-                ]
+                messages=[{"role": "user", "content": prompt}]
             )
-            reply = response["choices"][0]["message"]["content"]
+            reply = response.choices[0].message["content"]
             await message.channel.send(reply)
         except Exception as e:
-            await message.channel.send(f"❌ Error: {e}")
+            await message.channel.send(f"⚠️ Error: {e}")
 
-# Fix asyncio for Colab
-nest_asyncio.apply()
-
-async def start_bot():
-    await client.start(DISCORD_TOKEN)
-
-asyncio.run(start_bot())
+# Run bot
+bot.run(DISCORD_TOKEN)
